@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת לימוד חשבון</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #222; direction: rtl; }
+
+  header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 8px #0003; flex-wrap: wrap; }
+  header h1 { font-size: 1.5rem; }
+  header .subtitle { font-size: 0.85rem; opacity: 0.85; }
+
+  .user-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .user-avatar-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.4); border-radius: 14px; padding: 6px 12px; cursor: pointer; color: white; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; min-width: 64px; }
+  .user-avatar-btn:hover { background: rgba(255,255,255,0.25); }
+  .user-avatar-btn.active { background: white; color: #1a73e8; border-color: white; }
+  .user-avatar-btn.active .uname { color: #1a73e8; }
+  .user-avatar-btn.parent-btn.active { background: gold; color: #333; border-color: gold; }
+  .user-avatar-btn.parent-btn.active .uname { color: #333; }
+  .avatar-img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+  .avatar-emoji { font-size: 1.9rem; line-height: 1; }
+  .uname { font-size: 0.78rem; white-space: nowrap; }
+  .setup-badge { font-size: 0.6rem; background: #fbbc04; color: #333; border-radius: 4px; padding: 1px 4px; display: block; margin-top: 1px; }
+
+  .sync-ind { font-size: 0.75rem; padding: 3px 9px; border-radius: 10px; background: rgba(255,255,255,0.2); color: white; }
+  .sync-ind.saving { background: rgba(255,200,0,0.35); }
+  .sync-ind.saved { background: rgba(80,220,80,0.35); }
+
+  .main-layout { display: flex; min-height: calc(100vh - 70px); }
+  .sidebar { width: 230px; background: #fff; border-left: 2px solid #e0e0e0; padding: 14px 0; flex-shrink: 0; overflow-y: auto; }
+  .sidebar-section { margin-bottom: 8px; }
+  .sidebar-title { font-size: 0.72rem; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 16px 4px; }
+  .sidebar-btn { display: block; width: 100%; text-align: right; padding: 9px 16px; background: none; border: none; cursor: pointer; font-size: 0.93rem; color: #333; border-right: 3px solid transparent; transition: all 0.15s; }
+  .sidebar-btn:hover { background: #e8f0fe; color: #1a73e8; }
+  .sidebar-btn.active { background: #e8f0fe; color: #1a73e8; border-right-color: #1a73e8; font-weight: 600; }
+
+  .content { flex: 1; padding: 22px; overflow-y: auto; }
+
+  .grade-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .grade-btn { padding: 6px 14px; border: 2px solid #1a73e8; border-radius: 20px; background: white; color: #1a73e8; cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; }
+  .grade-btn.active, .grade-btn:hover { background: #1a73e8; color: white; }
+
+  .exercise-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .exercise-title { font-size: 1.2rem; font-weight: 700; color: #1a73e8; }
+  .exercise-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { padding: 7px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; }
+  .btn-primary { background: #1a73e8; color: white; }
+  .btn-primary:hover { background: #1558b0; }
+  .btn-success { background: #34a853; color: white; }
+  .btn-success:hover { background: #2d8f46; }
+  .btn-warning { background: #fbbc04; color: #222; }
+  .btn-outline { background: white; border: 2px solid #1a73e8; color: #1a73e8; }
+  .btn-outline:hover { background: #e8f0fe; }
+
+  .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat-chip { background: white; border-radius: 10px; padding: 5px 12px; font-size: 0.83rem; box-shadow: 0 1px 4px #0001; border: 1px solid #e0e0e0; }
+  .stat-chip b { color: #1a73e8; }
+  .stat-chip.correct b { color: #34a853; }
+  .stat-chip.wrong b { color: #ea4335; }
+
+  .progress-wrap { background: #e0e0e0; border-radius: 10px; height: 9px; margin-bottom: 14px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #34a853, #1a73e8); transition: width 0.3s; }
+
+  .exercise-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 11px; }
+
+  .exercise-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 1px 5px #0001; border: 2px solid #e8eaed; transition: all 0.2s; position: relative; direction: ltr; text-align: left; }
+  .exercise-card.answered-correct { border-color: #34a853; background: #f0faf4; }
+  .exercise-card.answered-wrong { border-color: #ea4335; background: #fff5f5; }
+
+  .exercise-num { position: absolute; top: 9px; right: 12px; font-size: 0.72rem; color: #bbb; font-weight: 600; }
+  .exercise-q { font-size: 1.25rem; font-weight: 700; margin-bottom: 11px; text-align: center; color: #222; line-height: 1.6; }
+  .exercise-q .fraction { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; }
+  .exercise-q .fraction .num { border-bottom: 2px solid #222; padding-bottom: 2px; line-height: 1.2; }
+  .exercise-q .fraction .den { line-height: 1.2; }
+
+  .answer-row { display: flex; gap: 7px; align-items: center; }
+  .answer-input { flex: 1; padding: 7px 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; text-align: center; outline: none; transition: border 0.15s; direction: ltr; }
+  .answer-input:focus { border-color: #1a73e8; }
+  .answer-input.correct { border-color: #34a853; background: #f0faf4; }
+  .answer-input.wrong { border-color: #ea4335; background: #fff5f5; }
+
+  .check-btn { padding: 7px 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.88rem; font-weight: 700; }
+  .check-btn:hover { background: #1558b0; }
+  .result-icon { font-size: 1.3rem; min-width: 26px; text-align: center; }
+  .correct-answer { font-size: 0.8rem; color: #ea4335; margin-top: 5px; font-weight: 600; text-align: center; }
+  .input-hint { font-size: 0.72rem; color: #999; margin-top: 4px; text-align: center; }
+
+  /* Mult table */
+  .mult-table { overflow-x: auto; margin-top: 14px; }
+  .mult-table table { border-collapse: collapse; }
+  .mult-table td, .mult-table th { width: 44px; height: 44px; text-align: center; font-size: 0.92rem; border: 1px solid #e0e0e0; }
+  .mult-table th { background: #1a73e8; color: white; font-weight: 700; }
+  .mult-table td { background: white; cursor: pointer; transition: background 0.1s; }
+  .mult-table td:hover { background: #e8f0fe; }
+  .mult-table td.highlight { background: #bbdefb; }
+  .mult-table td.hcol { background: #1a73e8; color: white; font-weight: 700; }
+
+  /* Modals */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: #0007; z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 18px; padding: 28px; max-width: 420px; width: 92%; box-shadow: 0 8px 32px #0004; text-align: center; }
+  .modal h2 { font-size: 1.4rem; margin-bottom: 14px; }
+  .score-big { font-size: 2.8rem; font-weight: 800; color: #1a73e8; margin: 12px 0; }
+  .score-detail { font-size: 0.97rem; color: #555; margin-bottom: 22px; }
+
+  /* PIN */
+  .pin-display { font-size: 2.2rem; letter-spacing: 14px; margin: 14px 0; min-height: 48px; color: #1a73e8; font-weight: 800; }
+  .pin-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; max-width: 230px; margin: 0 auto; }
+  .pin-btn { padding: 14px; font-size: 1.25rem; font-weight: 700; border: 2px solid #e0e0e0; border-radius: 11px; background: white; cursor: pointer; transition: all 0.1s; }
+  .pin-btn:hover { background: #e8f0fe; border-color: #1a73e8; }
+  .pin-btn:active { background: #1a73e8; color: white; }
+  .pin-btn.del { background: #fff5f5; border-color: #ea4335; color: #ea4335; }
+  .pin-error { color: #ea4335; font-size: 0.88rem; margin-top: 8px; min-height: 18px; }
+
+  /* Profile modal */
+  .profile-preview { width: 76px; height: 76px; border-radius: 50%; object-fit: cover; border: 3px solid #1a73e8; margin: 10px auto; display: block; }
+  .upload-label { display: inline-block; padding: 7px 16px; background: #e8f0fe; color: #1a73e8; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.88rem; margin-bottom: 10px; }
+
+  /* Welcome */
+  .welcome { text-align: center; padding: 32px 16px; }
+  .welcome h2 { font-size: 1.8rem; color: #1a73e8; margin-bottom: 10px; }
+  .welcome p { color: #666; font-size: 1rem; margin-bottom: 26px; }
+  .topic-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; max-width: 860px; margin: 0 auto; }
+  .topic-card { background: white; border-radius: 13px; padding: 22px 14px; text-align: center; cursor: pointer; box-shadow: 0 2px 9px #0001; border: 2px solid #e8eaed; transition: all 0.2s; }
+  .topic-card:hover { border-color: #1a73e8; transform: translateY(-2px); box-shadow: 0 5px 18px #1a73e820; }
+  .topic-icon { font-size: 2.3rem; margin-bottom: 8px; }
+  .topic-name { font-weight: 700; font-size: 0.97rem; color: #222; }
+  .topic-desc { font-size: 0.77rem; color: #888; margin-top: 3px; }
+
+  /* Dashboard */
+  .dash-title { font-size: 1.35rem; font-weight: 700; color: #1a73e8; margin-bottom: 18px; }
+  .dash-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .dash-tab { padding: 7px 18px; border-radius: 20px; border: 2px solid #1a73e8; background: white; color: #1a73e8; cursor: pointer; font-weight: 600; transition: all 0.15s; font-size: 0.88rem; }
+  .dash-tab.active { background: #1a73e8; color: white; }
+  .dash-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .dash-stat { background: white; border-radius: 11px; padding: 14px 18px; box-shadow: 0 2px 7px #0001; border: 1px solid #e0e0e0; text-align: center; min-width: 84px; }
+  .dash-stat .val { font-size: 1.8rem; font-weight: 800; color: #1a73e8; }
+  .dash-stat .lbl { font-size: 0.77rem; color: #888; margin-top: 3px; }
+  .dash-stat.green .val { color: #34a853; }
+  .dash-stat.red .val { color: #ea4335; }
+  .session-card { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 1px 5px #0001; border: 2px solid #e8eaed; margin-bottom: 10px; }
+  .session-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; flex-wrap: wrap; gap: 7px; }
+  .s-topic { font-weight: 700; color: #1a73e8; }
+  .s-time { font-size: 0.77rem; color: #aaa; }
+  .s-score { font-weight: 700; font-size: 1rem; }
+  .s-score.good { color: #34a853; }
+  .s-score.bad { color: #ea4335; }
+  .ex-row { display: flex; gap: 7px; align-items: center; padding: 3px 7px; border-radius: 6px; font-size: 0.83rem; margin-bottom: 3px; direction: ltr; }
+  .ex-row.ok { background: #f0faf4; }
+  .ex-row.fail { background: #fff5f5; }
+  .ex-q { flex: 1; color: #555; }
+  .ex-ua { font-weight: 700; }
+  .ex-ua.ok { color: #34a853; }
+  .ex-ua.fail { color: #ea4335; }
+  .ex-ca { color: #999; font-size: 0.78rem; }
+  .no-data { text-align: center; padding: 40px; color: #bbb; font-size: 1.05rem; }
+
+  @media (max-width: 600px) {
+    .sidebar { display: none; }
+    .exercise-grid { grid-template-columns: 1fr; }
+    .main-layout { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📐 מערכת לימוד חשבון</h1>
+    <div class="subtitle">לוח הכפל · שברים · חילוק ארוך · עשרוניים</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div class="user-bar" id="user-bar"></div>
+    <span class="sync-ind" id="sync-ind">🔄 מחבר...</span>
+  </div>
+</header>
+
+<div class="main-layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">נושאים</div>
+      <button class="sidebar-btn" onclick="showSection('welcome')">🏠 דף הבית</button>
+      <button class="sidebar-btn" onclick="showSection('mult-table')">✖️ לוח הכפל</button>
+      <button class="sidebar-btn" onclick="showSection('exercises')">📝 תרגילים</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">נושא</div>
+      <button class="sidebar-btn" onclick="startTopic('addition')">➕ חיבור</button>
+      <button class="sidebar-btn" onclick="startTopic('subtraction')">➖ חיסור</button>
+      <button class="sidebar-btn" onclick="startTopic('multiplication')">✖️ כפל</button>
+      <button class="sidebar-btn" onclick="startTopic('division')">➗ חילוק</button>
+      <button class="sidebar-btn" onclick="startTopic('long-division')">📏 חילוק ארוך</button>
+      <button class="sidebar-btn" onclick="startTopic('fractions')">½ שברים</button>
+      <button class="sidebar-btn" onclick="startTopic('frac-simplify')">🔢 צמצום שברים</button>
+      <button class="sidebar-btn" onclick="startTopic('decimals')">📍 עשרוניים</button>
+      <button class="sidebar-btn" onclick="startTopic('mixed')">🎲 מעורב</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">רמה</div>
+      <button class="sidebar-btn" onclick="setGrade(2)">⭐ כיתה ב׳</button>
+      <button class="sidebar-btn" onclick="setGrade(3)">⭐⭐ כיתה ג׳</button>
+      <button class="sidebar-btn" onclick="setGrade(4)">⭐⭐⭐ כיתה ד׳</button>
+      <button class="sidebar-btn" onclick="setGrade(5)">🌟 כיתה ה׳</button>
+      <button class="sidebar-btn" onclick="setGrade(6)">🌟🌟 כיתה ו׳</button>
+    </div>
+  </nav>
+  <main class="content" id="content">
+    <div class="no-data">👆 בחר משתמש למעלה כדי להתחיל</div>
+  </main>
+</div>
+
+<!-- Results Modal -->
+<div class="modal-overlay" id="results-modal">
+  <div class="modal">
+    <h2>🎉 סיימת את הסט!</h2>
+    <div class="score-big" id="modal-score">0/0</div>
+    <div class="score-detail" id="modal-detail"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="closeModal();generateExercises()">סט חדש</button>
+      <button class="btn btn-outline" onclick="closeModal()">חזור</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN Modal -->
+<div class="modal-overlay" id="pin-modal">
+  <div class="modal">
+    <h2 id="pin-title">🔒 קוד כניסה</h2>
+    <div id="pin-sub" style="color:#888;font-size:0.88rem;margin-bottom:6px;"></div>
+    <div class="pin-display" id="pin-disp">____</div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn" style="background:#e8f0fe;color:#1a73e8;border-color:#1a73e8;" onclick="pinConfirm()">✓</button>
+    </div>
+    <div class="pin-error" id="pin-err"></div>
+    <button class="btn btn-outline" style="margin-top:14px;" onclick="document.getElementById('pin-modal').classList.remove('open')">ביטול</button>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal">
+    <h2 id="prof-title">👤 פרופיל</h2>
+    <p style="color:#888;font-size:0.85rem;margin-bottom:14px;">הגדר תמונה וקוד כניסה אישי</p>
+    <div id="prof-emoji" style="font-size:2.8rem;margin:8px 0;"></div>
+    <img id="prof-img" class="profile-preview" src="" alt="" style="display:none;">
+    <label class="upload-label">
+      📷 בחר תמונה
+      <input type="file" accept="image/*" id="prof-file" style="display:none;" onchange="handlePhoto(event)">
+    </label>
+    <div style="margin-top:14px;">
+      <div style="font-weight:600;margin-bottom:6px;font-size:0.9rem;">קוד כניסה (4 ספרות):</div>
+      <div class="pin-display" id="setup-disp">____</div>
+      <div class="pin-grid">
+        <button class="pin-btn" onclick="spPress('1')">1</button>
+        <button class="pin-btn" onclick="spPress('2')">2</button>
+        <button class="pin-btn" onclick="spPress('3')">3</button>
+        <button class="pin-btn" onclick="spPress('4')">4</button>
+        <button class="pin-btn" onclick="spPress('5')">5</button>
+        <button class="pin-btn" onclick="spPress('6')">6</button>
+        <button class="pin-btn" onclick="spPress('7')">7</button>
+        <button class="pin-btn" onclick="spPress('8')">8</button>
+        <button class="pin-btn" onclick="spPress('9')">9</button>
+        <button class="pin-btn del" onclick="spDel()">⌫</button>
+        <button class="pin-btn" onclick="spPress('0')">0</button>
+        <button class="pin-btn" style="opacity:0.3;" id="sp-ok" disabled>✓</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="prof-save" onclick="saveProfile()" disabled>💾 שמור</button>
+      <button class="btn btn-outline" onclick="document.getElementById('profile-modal').classList.remove('open')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const cfg = {
+  apiKey: "AIzaSyBZDIqvWoPGZi3rJ0-3G_PKFXBCT7QyYB0",
+  authDomain: "matmatca-bab56.firebaseapp.com",
+  projectId: "matmatca-bab56",
+  storageBucket: "matmatca-bab56.firebasestorage.app",
+  messagingSenderId: "166974692966",
+  appId: "1:166974692966:web:5b283058cefe12b73d97a7",
+  databaseURL: "https://matmatca-bab56-default-rtdb.firebaseio.com"
+};
+const app = initializeApp(cfg);
+const db = getDatabase(app);
+window._db = db; window._ref = ref; window._set = set; window._get = get;
+window._fbReady = true;
+const si = document.getElementById('sync-ind');
+si.textContent = '✅ מחובר'; si.className = 'sync-ind saved';
+window.initApp();
+</script>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const USERS = [
+  { id:'adar',   name:'אדר',  emoji:'👦' },
+  { id:'agam',   name:'אגם',  emoji:'👧' },
+  { id:'parent', name:'הורה', emoji:'👨‍👩‍👧', isParent:true },
+];
+
+let profiles = {};
+try { profiles = JSON.parse(localStorage.getItem('mpm_profiles')||'{}'); } catch(e){}
+
+let currentUser = null;
+
+// ============================================================
+// PROFILE SETUP
+// ============================================================
+let spPin = '', spPhoto = '', spUid = '';
+
+function openProfile(uid) {
+  spUid = uid; spPin = '';
+  spPhoto = profiles[uid]?.photo || '';
+  const u = USERS.find(x=>x.id===uid);
+  document.getElementById('prof-title').textContent = `👤 פרופיל של ${u.name}`;
+  document.getElementById('prof-emoji').textContent = u.emoji;
+  const img = document.getElementById('prof-img');
+  if (spPhoto) { img.src = spPhoto; img.style.display='block'; document.getElementById('prof-emoji').style.display='none'; }
+  else { img.style.display='none'; document.getElementById('prof-emoji').style.display='block'; }
+  updSpDisp();
+  document.getElementById('prof-save').disabled = true;
+  document.getElementById('profile-modal').classList.add('open');
+}
+
+function handlePhoto(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    spPhoto = ev.target.result;
+    const img = document.getElementById('prof-img');
+    img.src = spPhoto; img.style.display='block';
+    document.getElementById('prof-emoji').style.display='none';
+    checkSaveReady();
+  };
+  r.readAsDataURL(f);
+}
+
+function spPress(d) { if(spPin.length>=4)return; spPin+=d; updSpDisp(); checkSaveReady(); }
+function spDel() { spPin=spPin.slice(0,-1); updSpDisp(); checkSaveReady(); }
+function updSpDisp() {
+  let s=''; for(let i=0;i<4;i++) s+=spPin[i]?'●':'_';
+  document.getElementById('setup-disp').textContent=s;
+}
+function checkSaveReady() {
+  const ok = spPin.length===4;
+  document.getElementById('prof-save').disabled = !ok;
+}
+
+function saveProfile() {
+  if(spPin.length!==4)return;
+  profiles[spUid]={pin:spPin,photo:spPhoto};
+  localStorage.setItem('mpm_profiles',JSON.stringify(profiles));
+  document.getElementById('profile-modal').classList.remove('open');
+  renderUserBar();
+}
+
+// ============================================================
+// PIN LOGIN
+// ============================================================
+let pinBuf='', pinUid='';
+
+function openPin(uid) {
+  pinUid=uid; pinBuf='';
+  const u=USERS.find(x=>x.id===uid);
+  document.getElementById('pin-title').textContent=`🔒 שלום ${u.name}!`;
+  document.getElementById('pin-sub').textContent='הכנס קוד כניסה';
+  document.getElementById('pin-err').textContent='';
+  updPinDisp();
+  document.getElementById('pin-modal').classList.add('open');
+}
+
+function pinPress(d) { if(pinBuf.length>=4)return; pinBuf+=d; updPinDisp(); if(pinBuf.length===4)setTimeout(pinConfirm,150); }
+function pinDel() { pinBuf=pinBuf.slice(0,-1); updPinDisp(); }
+function updPinDisp() { let s=''; for(let i=0;i<4;i++)s+=pinBuf[i]?'●':'_'; document.getElementById('pin-disp').textContent=s; }
+function pinConfirm() {
+  if(pinBuf===profiles[pinUid]?.pin) {
+    document.getElementById('pin-modal').classList.remove('open');
+    activateUser(pinUid);
+  } else {
+    document.getElementById('pin-err').textContent='❌ קוד שגוי, נסה שוב';
+    pinBuf=''; updPinDisp();
+  }
+}
+
+// ============================================================
+// USER BAR
+// ============================================================
+function renderUserBar() {
+  document.getElementById('user-bar').innerHTML = USERS.map(u=>{
+    const p=profiles[u.id];
+    const isActive=currentUser&&currentUser.id===u.id;
+    const av=p?.photo?`<img class="avatar-img" src="${p.photo}">`:`<span class="avatar-emoji">${u.emoji}</span>`;
+    const badge=(!p?.pin&&!u.isParent)?`<span class="setup-badge">הגדר</span>`:'';
+    return `<button class="user-avatar-btn ${u.isParent?'parent-btn':''} ${isActive?'active':''}" onclick="handleUserClick('${u.id}')">${av}<span class="uname">${u.name}</span>${badge}</button>`;
+  }).join('');
+}
+
+function handleUserClick(uid) {
+  const u=USERS.find(x=>x.id===uid);
+  if(u.isParent){activateUser(uid);return;}
+  if(!profiles[uid]?.pin){openProfile(uid);return;}
+  openPin(uid);
+}
+
+function activateUser(uid) {
+  currentUser=USERS.find(x=>x.id===uid);
+  renderUserBar();
+  if(currentUser.isParent){
+    document.getElementById('sidebar').style.display='none';
+    renderDashboard();
+  } else {
+    document.getElementById('sidebar').style.display='';
+    renderWelcome();
+  }
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let topic='mixed', grade=3, exercises=[], answered={}, sessionId=null;
+
+// ============================================================
+// UTILS
+// ============================================================
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;}
+function lcm(a,b){return(a*b)/gcd(a,b);}
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function simplify(n,d){const g=gcd(Math.abs(n),Math.abs(d));return[n/g,d/g];}
+function stripHtml(s){return s.replace(/<[^>]+>/g,'');}
+function gradeHeb(g){return['','א׳','ב׳','ג׳','ד׳','ה׳','ו׳'][g]||g;}
+function fmtFrac(n,d){if(d===1)return String(n);return `<span class="fraction"><span class="num">${n}</span><span class="den">${d}</span></span>`;}
+function parseAns(v){
+  v=v.trim().replace(/\s/g,'');
+  if(/^-?\d+\/\d+$/.test(v)){const[n,d]=v.split('/').map(Number);return{n,d,valid:d!==0};}
+  if(/^-?\d+$/.test(v))return{n:parseInt(v),d:1,valid:true};
+  if(/^-?\d+[.,]\d+$/.test(v)){const f=parseFloat(v.replace(',','.'));const dec=(v.replace(',','.').split('.')[1]||'').length;return{n:Math.round(f*Math.pow(10,dec)),d:Math.pow(10,dec),valid:true};}
+  return{valid:false};
+}
+function fracEq(n1,d1,n2,d2){return n1*d2===n2*d1;}
+
+// ============================================================
+// SAVE SESSION
+// ============================================================
+function saveSession(){
+  if(!window._fbReady||!sessionId||!currentUser)return;
+  const total=exercises.length,arr=Object.values(answered);
+  const correct=arr.filter(a=>a.correct).length,wrong=arr.filter(a=>!a.correct).length;
+  const data={user:currentUser.id,userName:currentUser.name,topic,grade,timestamp:Date.now(),total,correct,wrong,
+    exercises:exercises.map((ex,i)=>{const a=answered[i];return{q:stripHtml(ex.q),correctAnswer:String(ex.ans),userAnswer:a?a.userAnswer:'',correct:a?a.correct:null,answered:!!a};})
+  };
+  const si=document.getElementById('sync-ind');
+  si.textContent='💾 שומר...';si.className='sync-ind saving';
+  window._set(window._ref(window._db,`sessions/${currentUser.id}/${sessionId}`),data)
+    .then(()=>{si.textContent='✅ נשמר';si.className='sync-ind saved';})
+    .catch(()=>{si.textContent='⚠️ שגיאה';});
+}
+
+// ============================================================
+// GENERATORS
+// ============================================================
+const gen={
+  addition:g=>{if(g<=2){const a=rnd(1,20),b=rnd(1,20);return{q:`${a} + ${b} = ?`,ans:a+b,type:'int'};}if(g<=3){const a=rnd(10,99),b=rnd(10,99);return{q:`${a} + ${b} = ?`,ans:a+b,type:'int'};}if(g<=4){const a=rnd(100,999),b=rnd(100,999);return{q:`${a} + ${b} = ?`,ans:a+b,type:'int'};}const a=rnd(1000,9999),b=rnd(1000,9999);return{q:`${a} + ${b} = ?`,ans:a+b,type:'int'};},
+  subtraction:g=>{if(g<=2){const b=rnd(1,20),a=rnd(b,30);return{q:`${a} - ${b} = ?`,ans:a-b,type:'int'};}if(g<=3){const b=rnd(10,99),a=rnd(b,199);return{q:`${a} - ${b} = ?`,ans:a-b,type:'int'};}const b=rnd(100,999),a=rnd(b,1999);return{q:`${a} - ${b} = ?`,ans:a-b,type:'int'};},
+  multiplication:g=>{if(g<=3){const a=rnd(1,10),b=rnd(1,10);return{q:`${a} × ${b} = ?`,ans:a*b,type:'int'};}if(g<=4){const a=rnd(2,12),b=rnd(10,99);return{q:`${a} × ${b} = ?`,ans:a*b,type:'int'};}const a=rnd(10,99),b=rnd(10,99);return{q:`${a} × ${b} = ?`,ans:a*b,type:'int'};},
+  division:g=>{if(g<=3){const b=rnd(1,10),a=rnd(1,10);return{q:`${b*a} ÷ ${b} = ?`,ans:a,type:'int'};}if(g<=4){const b=rnd(2,12),a=rnd(2,20);return{q:`${b*a} ÷ ${b} = ?`,ans:a,type:'int'};}const b=rnd(2,12),a=rnd(10,50);return{q:`${b*a} ÷ ${b} = ?`,ans:a,type:'int'};},
+  'long-division':g=>{let dv,qt,rm;if(g<=3){dv=rnd(2,9);qt=rnd(10,99);rm=0;}else if(g<=4){dv=rnd(2,9);qt=rnd(10,99);rm=rnd(0,dv-1);}else{dv=rnd(2,12);qt=rnd(10,99);rm=rnd(0,dv-1);}const dd=dv*qt+rm,qstr=rm>0?`${qt} שארית ${rm}`:`${qt}`;return{q:`${dd} ÷ ${dv} = ?`,ans:qstr,type:'long-div',extra:{dd,dv,qt,rm}};},
+  fractions:g=>{const ops=g<=3?['add','sub']:g<=4?['add','sub','mul']:['add','sub','mul','div'];const op=ops[rnd(0,ops.length-1)];let d1=rnd(2,g<=3?6:10),n1=rnd(1,d1-1),d2=g<=3?d1:rnd(2,8),n2=rnd(1,d2-1);let qh,an,ad;if(op==='add'){const l=lcm(d1,d2);an=n1*(l/d1)+n2*(l/d2);ad=l;qh=`${fmtFrac(n1,d1)} + ${fmtFrac(n2,d2)} = ?`;}else if(op==='sub'){const l=lcm(d1,d2);let r1=n1*(l/d1),r2=n2*(l/d2);if(r1<r2){[n1,d1,n2,d2]=[n2,d2,n1,d1];[r1,r2]=[r2,r1];}an=r1-r2;ad=l;qh=`${fmtFrac(n1,d1)} - ${fmtFrac(n2,d2)} = ?`;}else if(op==='mul'){an=n1*n2;ad=d1*d2;qh=`${fmtFrac(n1,d1)} × ${fmtFrac(n2,d2)} = ?`;}else{an=n1*d2;ad=d1*n2;qh=`${fmtFrac(n1,d1)} ÷ ${fmtFrac(n2,d2)} = ?`;}const[sn,sd]=simplify(an,ad);return{q:qh,ans:`${sn}/${sd}`,ansN:sn,ansD:sd,type:'fraction',html:true};},
+  'frac-simplify':g=>{const d=rnd(2,g<=4?6:12),k=rnd(2,g<=4?4:8),n=rnd(1,d-1);const[sn,sd]=simplify(n*k,d*k);return{q:`${fmtFrac(n*k,d*k)} — צמצם`,ans:`${sn}/${sd}`,ansN:sn,ansD:sd,type:'fraction',html:true};},
+  decimals:g=>{const types=['add','sub','mul','smul'],t=types[rnd(0,3)];if(t==='smul'){const bs=[0.001,0.01,0.1],ms=[10,100,1000,50,25,200];const b=bs[rnd(0,bs.length-1)],m=ms[rnd(0,ms.length-1)];return{q:`${b} × ${m} = ?`,ans:String(parseFloat((b*m).toPrecision(10))),type:'decimal'};}if(t==='add'){const dc=rnd(1,2),f=Math.pow(10,dc),a=rnd(1,99)/f,b=rnd(1,99)/f;return{q:`${a.toFixed(dc)} + ${b.toFixed(dc)} = ?`,ans:String(parseFloat((a+b).toFixed(dc+1))),type:'decimal'};}if(t==='sub'){const dc=rnd(1,2),f=Math.pow(10,dc),b=rnd(1,50)/f,a=rnd(50,99)/f;return{q:`${a.toFixed(dc)} - ${b.toFixed(dc)} = ?`,ans:String(parseFloat((a-b).toFixed(dc+1))),type:'decimal'};}const a=rnd(1,9),dc=rnd(1,2),f=Math.pow(10,dc),b=rnd(1,99)/f;return{q:`${a} × ${b.toFixed(dc)} = ?`,ans:String(parseFloat((a*b).toPrecision(10))),type:'decimal'};},
+  mixed:g=>{const p=g<=2?['addition','subtraction','multiplication']:g<=3?['addition','subtraction','multiplication','division']:g<=4?['addition','subtraction','multiplication','division','long-division','fractions']:['multiplication','division','long-division','fractions','frac-simplify','decimals'];return gen[p[rnd(0,p.length-1)]](g);}
+};
+
+// ============================================================
+// GENERATE & RENDER
+// ============================================================
+function generateExercises(cnt){
+  cnt=cnt||(grade<=3?20:30);
+  exercises=[];answered={};
+  sessionId='s'+Date.now();
+  for(let i=0;i<cnt;i++)exercises.push(gen[topic](grade));
+  renderExercises();
+  document.getElementById('content').scrollTop=0;
+  saveSession();
+}
+
+function renderExercises(){
+  if(!currentUser){document.getElementById('content').innerHTML='<div class="no-data">👆 בחר משתמש</div>';return;}
+  const total=exercises.length,done=Object.keys(answered).length,correct=Object.values(answered).filter(a=>a.correct).length,wrong=Object.values(answered).filter(a=>!a.correct).length;
+  const tnames={'addition':'חיבור','subtraction':'חיסור','multiplication':'כפל','division':'חילוק','long-division':'חילוק ארוך','fractions':'שברים','frac-simplify':'צמצום שברים','decimals':'עשרוניים','mixed':'מעורב'};
+  const uav=profiles[currentUser.id]?.photo?`<img style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;" src="${profiles[currentUser.id].photo}">`:`${currentUser.emoji}`;
+
+  let html=`<div class="exercise-header">
+    <div class="exercise-title">📝 ${tnames[topic]} — כיתה ${gradeHeb(grade)} ${uav} ${currentUser.name}</div>
+    <div class="exercise-controls">
+      <button class="btn btn-success" onclick="checkAll()">✅ בדוק הכל</button>
+      <button class="btn btn-primary" onclick="generateExercises()">🔄 סט חדש</button>
+      <button class="btn btn-warning" onclick="showResults()">📊 תוצאות</button>
+    </div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-chip">סה"כ: <b>${total}</b></div>
+    <div class="stat-chip">ענית: <b>${done}</b></div>
+    <div class="stat-chip correct">נכון: <b>${correct}</b></div>
+    <div class="stat-chip wrong">שגוי: <b>${wrong}</b></div>
+  </div>
+  <div class="progress-wrap"><div class="progress-fill" style="width:${total?done/total*100:0}%"></div></div>
+  <div class="exercise-grid">`;
+
+  exercises.forEach((ex,i)=>{
+    const a=answered[i];
+    let cc='exercise-card';
+    if(a)cc+=a.correct?' answered-correct':' answered-wrong';
+    let res='',ic='';
+    if(a){res=a.correct?`<div class="result-icon">✅</div>`:`<div><div class="result-icon">❌</div><div class="correct-answer">✓ ${ex.ans}</div></div>`;ic=a.correct?'correct':'wrong';}
+    const hint=ex.type==='fraction'?'<div class="input-hint">e.g. 3/4</div>':ex.type==='long-div'?'<div class="input-hint">e.g. 12 שארית 3</div>':'';
+    html+=`<div class="${cc}" id="c${i}">
+      <span class="exercise-num">#${i+1}</span>
+      <div class="exercise-q">${ex.q}</div>
+      <div class="answer-row">
+        <input type="text" class="answer-input ${ic}" id="in${i}" value="${a?a.userAnswer:''}" placeholder="?" ${a?'disabled':''} onkeydown="if(event.key==='Enter')checkOne(${i})">
+        ${!a?`<button class="check-btn" onclick="checkOne(${i})">✓</button>`:''}
+        ${res}
+      </div>${hint}
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('content').innerHTML=html;
+}
+
+// ============================================================
+// CHECK
+// ============================================================
+function checkOne(i){
+  const ex=exercises[i];
+  const inp=document.getElementById(`in${i}`);
+  const v=inp?inp.value.trim():'';
+  if(!v)return;
+  let ok=false;
+  if(ex.type==='int'){ok=parseInt(v)===ex.ans;}
+  else if(ex.type==='fraction'){const p=parseAns(v);if(p.valid)ok=fracEq(p.n,p.d,ex.ansN,ex.ansD);}
+  else if(ex.type==='decimal'){ok=Math.abs(parseFloat(v.replace(',','.'))-parseFloat(ex.ans))<1e-9;}
+  else if(ex.type==='long-div'){
+    const e=ex.extra,vv=v.replace(/\s+/g,' ').trim().toLowerCase();
+    if(e.rm===0){ok=parseInt(v)===e.qt;}
+    else{ok=[new RegExp(`^${e.qt}\\s*שארית\\s*${e.rm}$`),new RegExp(`^${e.qt}\\s*r\\s*${e.rm}$`),new RegExp(`^${e.qt}\\s*,\\s*${e.rm}$`)].some(p=>p.test(vv));}
+  }
+  answered[i]={correct:ok,userAnswer:v};
+  renderExercises();
+  saveSession();
+  setTimeout(()=>{const el=document.getElementById(`c${i}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},50);
+}
+
+function checkAll(){exercises.forEach((_,i)=>{if(!answered[i]){const inp=document.getElementById(`in${i}`);if(inp&&inp.value.trim())checkOne(i);}});renderExercises();saveSession();}
+
+function showResults(){
+  const total=exercises.length,arr=Object.values(answered),c=arr.filter(a=>a.correct).length,w=arr.filter(a=>!a.correct).length,u=total-arr.length;
+  document.getElementById('modal-score').textContent=`${c}/${total}`;
+  const pct=total?Math.round(c/total*100):0;
+  const e=pct>=90?'🏆 מצוין!':pct>=70?'👍 כל הכבוד!':pct>=50?'📚 טוב, המשך!':'💪 תנסה שוב!';
+  document.getElementById('modal-detail').innerHTML=`<b>${pct}%</b> — ${e}<br>נכון: ${c} · שגוי: ${w} · לא ענית: ${u}`;
+  document.getElementById('results-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('results-modal').classList.remove('open');}
+
+// ============================================================
+// MULT TABLE
+// ============================================================
+function renderMultTable(){
+  const max=grade<=2?5:grade<=3?10:12;
+  let html=`<div class="exercise-header"><div class="exercise-title">✖️ לוח הכפל עד ${max}×${max}</div><div class="exercise-controls"><button class="btn btn-primary" onclick="startTopic('multiplication')">🎯 תרגל!</button></div></div><div class="mult-table"><table><tr><th>×</th>`;
+  for(let i=1;i<=max;i++)html+=`<th>${i}</th>`;html+='</tr>';
+  for(let i=1;i<=max;i++){html+=`<tr><td class="hcol">${i}</td>`;for(let j=1;j<=max;j++)html+=`<td onclick="hlCell(this,${i},${j})" id="mc${i}_${j}">${i*j}</td>`;html+='</tr>';}
+  html+=`</table></div><div style="font-size:0.82rem;color:#aaa;margin-top:7px;">לחץ על תא להדגשה</div>`;
+  document.getElementById('content').innerHTML=html;
+}
+function hlCell(el,r,c){
+  document.querySelectorAll('.mult-table td.highlight').forEach(t=>t.classList.remove('highlight'));
+  for(let j=1;j<=12;j++){const t=document.getElementById(`mc${r}_${j}`);if(t)t.classList.add('highlight');}
+  for(let i=1;i<=12;i++){const t=document.getElementById(`mc${i}_${c}`);if(t)t.classList.add('highlight');}
+  el.style.background='#ffd600';
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard(fu){
+  document.getElementById('content').innerHTML=`<div>
+    <div class="dash-title">📊 דשבורד הורה</div>
+    <div class="dash-tabs">
+      ${USERS.filter(u=>!u.isParent).map(u=>{const ph=profiles[u.id]?.photo;const av=ph?`<img style="width:19px;height:19px;border-radius:50%;object-fit:cover;vertical-align:middle;" src="${ph}">`:`${u.emoji}`;return `<button class="dash-tab ${fu===u.id?'active':''}" onclick="renderDashboard('${u.id}')">${av} ${u.name}</button>`;}).join('')}
+      <button class="dash-tab ${!fu?'active':''}" onclick="renderDashboard()">👥 כולם</button>
+    </div>
+    <div id="dash-body"><div class="no-data">⏳ טוען...</div></div>
+  </div>`;
+  if(!window._fbReady){document.getElementById('dash-body').innerHTML='<div class="no-data">⚠️ אין חיבור</div>';return;}
+  const uids=fu?[fu]:USERS.filter(u=>!u.isParent).map(u=>u.id);
+  const all=[];let ld=0;
+  uids.forEach(uid=>{
+    window._get(window._ref(window._db,`sessions/${uid}`)).then(snap=>{
+      if(snap.exists())Object.values(snap.val()).forEach(s=>all.push(s));
+      ld++;if(ld===uids.length)renderDashBody(all,fu);
+    }).catch(()=>{ld++;if(ld===uids.length)renderDashBody(all,fu);});
+  });
+}
+
+function renderDashBody(sessions,fu){
+  const db=document.getElementById('dash-body');
+  if(!sessions.length){db.innerHTML='<div class="no-data">📭 אין נתונים עדיין</div>';return;}
+  sessions.sort((a,b)=>b.timestamp-a.timestamp);
+  const te=sessions.reduce((s,x)=>s+x.total,0),tc=sessions.reduce((s,x)=>s+x.correct,0),tw=sessions.reduce((s,x)=>s+x.wrong,0),pct=te?Math.round(tc/te*100):0;
+  const tn={'addition':'חיבור','subtraction':'חיסור','multiplication':'כפל','division':'חילוק','long-division':'חילוק ארוך','fractions':'שברים','frac-simplify':'צמצום שברים','decimals':'עשרוניים','mixed':'מעורב'};
+
+  let html=`<div style="margin-bottom:20px;"><div style="font-weight:700;color:#444;margin-bottom:10px;border-bottom:2px solid #e0e0e0;padding-bottom:6px;">סיכום כולל</div>
+  <div class="dash-stats">
+    <div class="dash-stat"><div class="val">${sessions.length}</div><div class="lbl">סשנים</div></div>
+    <div class="dash-stat"><div class="val">${te}</div><div class="lbl">תרגילים</div></div>
+    <div class="dash-stat green"><div class="val">${tc}</div><div class="lbl">נכון ✅</div></div>
+    <div class="dash-stat red"><div class="val">${tw}</div><div class="lbl">שגוי ❌</div></div>
+    <div class="dash-stat"><div class="val">${pct}%</div><div class="lbl">הצלחה</div></div>
+  </div></div>
+  <div><div style="font-weight:700;color:#444;margin-bottom:10px;border-bottom:2px solid #e0e0e0;padding-bottom:6px;">היסטוריה</div>`;
+
+  sessions.forEach(s=>{
+    const dt=new Date(s.timestamp);
+    const ds=dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    const sp=s.total?Math.round(s.correct/s.total*100):0;
+    const u=USERS.find(x=>x.id===s.user);
+    const ph=profiles[s.user]?.photo;
+    const av=ph?`<img style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;" src="${ph}">`:`${u?.emoji||''}`;
+    const ul=!fu?`<span style="background:#e8f0fe;border-radius:5px;padding:2px 7px;font-size:0.78rem;">${av} ${s.userName}</span>`:'';
+    html+=`<div class="session-card">
+      <div class="session-hdr">
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">${ul}<span class="s-topic">${tn[s.topic]||s.topic}</span><span style="font-size:0.77rem;color:#aaa;">כיתה ${gradeHeb(s.grade)}</span></div>
+        <div style="display:flex;gap:7px;align-items:center;"><span class="s-time">${ds}</span><span class="s-score ${sp>=70?'good':'bad'}">${s.correct}/${s.total} (${sp}%)</span></div>
+      </div><div>`;
+    if(s.exercises){s.exercises.forEach(ex=>{
+      if(!ex.answered)return;
+      html+=`<div class="ex-row ${ex.correct?'ok':'fail'}">
+        <span style="font-size:0.95rem;min-width:18px;">${ex.correct?'✅':'❌'}</span>
+        <span class="ex-q">${ex.q}</span>
+        <span class="ex-ua ${ex.correct?'ok':'fail'}">${ex.userAnswer}</span>
+        ${!ex.correct?`<span class="ex-ca">✓ ${ex.correctAnswer}</span>`:''}
+      </div>`;
+    });}
+    html+=`</div></div>`;
+  });
+  html+='</div>';
+  db.innerHTML=html;
+}
+
+// ============================================================
+// NAV
+// ============================================================
+function showSection(s){
+  if(!currentUser)return;
+  if(s==='welcome')renderWelcome();
+  else if(s==='mult-table')renderMultTable();
+  else if(s==='exercises')renderExercises();
+}
+function startTopic(t){topic=t;generateExercises();}
+function setGrade(g){grade=g;renderWelcome();}
+
+function renderWelcome(){
+  if(!currentUser){document.getElementById('content').innerHTML='<div class="no-data">👆 בחר משתמש למעלה</div>';return;}
+  const ph=profiles[currentUser.id]?.photo;
+  const av=ph?`<img style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:3px solid #1a73e8;" src="${ph}">`:`<span style="font-size:3.5rem;">${currentUser.emoji}</span>`;
+  const topics=[
+    {k:'addition',i:'➕',n:'חיבור',d:'חיבור מספרים'},
+    {k:'subtraction',i:'➖',n:'חיסור',d:'חיסור מספרים'},
+    {k:'multiplication',i:'✖️',n:'כפל',d:'לוח הכפל ועוד'},
+    {k:'division',i:'➗',n:'חילוק',d:'חילוק מספרים'},
+    {k:'long-division',i:'📏',n:'חילוק ארוך',d:'עם שאריות'},
+    {k:'fractions',i:'½',n:'שברים',d:'כל הפעולות'},
+    {k:'frac-simplify',i:'🔢',n:'צמצום שברים',d:'הצורה הפשוטה'},
+    {k:'decimals',i:'📍',n:'עשרוניים',d:'0.001×100 ועוד'},
+    {k:'mixed',i:'🎲',n:'מעורב',d:'הכל ביחד!'},
+  ];
+  let html=`<div class="welcome">${av}
+    <h2 style="margin-top:12px;">שלום ${currentUser.name}! 🎓</h2>
+    <p>בחר נושא ורמה להתחלה</p>
+    <div style="margin-bottom:10px;"><button class="btn btn-outline" style="font-size:0.82rem;padding:5px 12px;" onclick="openProfile('${currentUser.id}')">✏️ ערוך פרופיל</button></div>
+    <div class="grade-bar" style="justify-content:center;margin-bottom:24px;">${[2,3,4,5,6].map(g=>`<button class="grade-btn ${g===grade?'active':''}" onclick="setGrade(${g})">כיתה ${gradeHeb(g)}</button>`).join('')}</div>
+    <div class="topic-cards">`;
+  topics.forEach(t=>{html+=`<div class="topic-card" onclick="startTopic('${t.k}')"><div class="topic-icon">${t.i}</div><div class="topic-name">${t.n}</div><div class="topic-desc">${t.d}</div></div>`;});
+  html+='</div></div>';
+  document.getElementById('content').innerHTML=html;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.initApp=function(){
+  renderUserBar();
+};
+
+// expose
+const fns={showSection,startTopic,setGrade,checkOne,checkAll,showResults,closeModal,renderMultTable,hlCell,generateExercises,renderDashboard,openProfile,handlePhoto,spPress,spDel,saveProfile,pinPress,pinDel,pinConfirm};
+Object.entries(fns).forEach(([k,v])=>window[k]=v);
+
+if(!window._fbReady){renderUserBar();}
+</script>
+</body>
+</html>
