@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת לימוד חשבון</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #222; direction: rtl; }
+
+  header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 18px 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px #0003; }
+  header h1 { font-size: 1.6rem; }
+  header .subtitle { font-size: 0.9rem; opacity: 0.85; }
+
+  .main-layout { display: flex; min-height: calc(100vh - 64px); }
+
+  /* Sidebar */
+  .sidebar { width: 240px; background: #fff; border-left: 2px solid #e0e0e0; padding: 16px 0; flex-shrink: 0; overflow-y: auto; }
+  .sidebar-section { margin-bottom: 8px; }
+  .sidebar-title { font-size: 0.75rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 18px 4px; }
+  .sidebar-btn { display: block; width: 100%; text-align: right; padding: 10px 18px; background: none; border: none; cursor: pointer; font-size: 0.95rem; color: #333; border-right: 3px solid transparent; transition: all 0.15s; }
+  .sidebar-btn:hover { background: #e8f0fe; color: #1a73e8; }
+  .sidebar-btn.active { background: #e8f0fe; color: #1a73e8; border-right-color: #1a73e8; font-weight: 600; }
+  .sidebar-btn .icon { margin-left: 8px; }
+
+  /* Content */
+  .content { flex: 1; padding: 24px; overflow-y: auto; }
+
+  /* Grade selector */
+  .grade-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .grade-btn { padding: 7px 16px; border: 2px solid #1a73e8; border-radius: 20px; background: white; color: #1a73e8; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.15s; }
+  .grade-btn.active, .grade-btn:hover { background: #1a73e8; color: white; }
+
+  /* Exercise area */
+  .exercise-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .exercise-title { font-size: 1.25rem; font-weight: 700; color: #1a73e8; }
+  .exercise-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { padding: 8px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.15s; }
+  .btn-primary { background: #1a73e8; color: white; }
+  .btn-primary:hover { background: #1558b0; }
+  .btn-success { background: #34a853; color: white; }
+  .btn-success:hover { background: #2d8f46; }
+  .btn-warning { background: #fbbc04; color: #222; }
+  .btn-warning:hover { background: #e0a800; }
+  .btn-danger { background: #ea4335; color: white; }
+  .btn-danger:hover { background: #c5221f; }
+  .btn-outline { background: white; border: 2px solid #1a73e8; color: #1a73e8; }
+  .btn-outline:hover { background: #e8f0fe; }
+
+  /* Stats bar */
+  .stats-bar { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat-chip { background: white; border-radius: 12px; padding: 6px 14px; font-size: 0.85rem; box-shadow: 0 1px 4px #0001; border: 1px solid #e0e0e0; }
+  .stat-chip b { color: #1a73e8; }
+  .stat-chip.correct { border-color: #34a853; }
+  .stat-chip.correct b { color: #34a853; }
+  .stat-chip.wrong { border-color: #ea4335; }
+  .stat-chip.wrong b { color: #ea4335; }
+
+  /* Exercise grid */
+  .exercise-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+
+  .exercise-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 6px #0001; border: 2px solid #e8eaed; transition: all 0.2s; position: relative; }
+  .exercise-card.answered-correct { border-color: #34a853; background: #f0faf4; }
+  .exercise-card.answered-wrong { border-color: #ea4335; background: #fff5f5; }
+  .exercise-card.marked { opacity: 0.6; }
+
+  .exercise-num { position: absolute; top: 10px; left: 14px; font-size: 0.75rem; color: #aaa; font-weight: 600; }
+  .exercise-q { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; text-align: center; color: #222; line-height: 1.6; }
+  .exercise-q .fraction { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 4px; }
+  .exercise-q .fraction .num { border-bottom: 2px solid #222; padding-bottom: 2px; line-height: 1.2; }
+  .exercise-q .fraction .den { line-height: 1.2; }
+
+  .answer-row { display: flex; gap: 8px; align-items: center; }
+  .answer-input { flex: 1; padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; text-align: center; outline: none; transition: border 0.15s; }
+  .answer-input:focus { border-color: #1a73e8; }
+  .answer-input.correct { border-color: #34a853; background: #f0faf4; }
+  .answer-input.wrong { border-color: #ea4335; background: #fff5f5; }
+
+  .check-btn { padding: 8px 14px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+  .check-btn:hover { background: #1558b0; }
+
+  .result-icon { font-size: 1.4rem; min-width: 28px; text-align: center; }
+  .correct-answer { font-size: 0.82rem; color: #ea4335; margin-top: 6px; font-weight: 600; }
+  .mark-done-btn { position: absolute; top: 10px; right: 14px; background: none; border: none; cursor: pointer; font-size: 1.1rem; opacity: 0.5; transition: opacity 0.15s; }
+  .mark-done-btn:hover, .mark-done-btn.active { opacity: 1; }
+
+  /* Multiplication table */
+  .mult-table { overflow-x: auto; margin-top: 16px; }
+  .mult-table table { border-collapse: collapse; min-width: 400px; }
+  .mult-table td, .mult-table th { width: 46px; height: 46px; text-align: center; font-size: 0.95rem; border: 1px solid #e0e0e0; }
+  .mult-table th { background: #1a73e8; color: white; font-weight: 700; }
+  .mult-table td { background: white; cursor: pointer; transition: background 0.1s; }
+  .mult-table td:hover { background: #e8f0fe; }
+  .mult-table td.highlight { background: #bbdefb; }
+  .mult-table td.header-col { background: #1a73e8; color: white; font-weight: 700; }
+  .mult-table-legend { font-size: 0.85rem; color: #666; margin-top: 8px; }
+
+  /* Progress bar */
+  .progress-wrap { background: #e0e0e0; border-radius: 10px; height: 10px; margin-bottom: 16px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #34a853, #1a73e8); transition: width 0.3s; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: #0006; z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; box-shadow: 0 8px 32px #0003; text-align: center; }
+  .modal h2 { font-size: 1.5rem; margin-bottom: 16px; }
+  .modal .score-big { font-size: 3rem; font-weight: 800; color: #1a73e8; margin: 16px 0; }
+  .modal .score-detail { font-size: 1rem; color: #555; margin-bottom: 24px; }
+
+  /* Welcome screen */
+  .welcome { text-align: center; padding: 40px 20px; }
+  .welcome h2 { font-size: 2rem; color: #1a73e8; margin-bottom: 12px; }
+  .welcome p { color: #555; font-size: 1.1rem; margin-bottom: 32px; }
+  .topic-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; max-width: 900px; margin: 0 auto; }
+  .topic-card { background: white; border-radius: 14px; padding: 24px 16px; text-align: center; cursor: pointer; box-shadow: 0 2px 10px #0001; border: 2px solid #e8eaed; transition: all 0.2s; }
+  .topic-card:hover { border-color: #1a73e8; transform: translateY(-2px); box-shadow: 0 6px 20px #1a73e820; }
+  .topic-card .topic-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .topic-card .topic-name { font-weight: 700; font-size: 1rem; color: #222; }
+  .topic-card .topic-desc { font-size: 0.8rem; color: #777; margin-top: 4px; }
+
+  /* Fraction input hint */
+  .input-hint { font-size: 0.75rem; color: #888; margin-top: 4px; text-align: center; }
+
+  /* Long division display */
+  .long-div-display { font-family: monospace; font-size: 1.2rem; text-align: center; margin-bottom: 12px; white-space: pre; line-height: 1.8; }
+
+  @media (max-width: 600px) {
+    .sidebar { display: none; }
+    .exercise-grid { grid-template-columns: 1fr; }
+    .main-layout { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📐 מערכת לימוד חשבון</h1>
+    <div class="subtitle">לוח הכפל · שברים · חילוק ארוך · עשרוניים</div>
+  </div>
+</header>
+
+<div class="main-layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">נושאים</div>
+      <button class="sidebar-btn active" onclick="showSection('welcome')"><span class="icon">🏠</span> דף הבית</button>
+      <button class="sidebar-btn" onclick="showSection('mult-table')"><span class="icon">✖️</span> לוח הכפל</button>
+      <button class="sidebar-btn" onclick="showSection('exercises')"><span class="icon">📝</span> תרגילים</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">תת-נושא</div>
+      <button class="sidebar-btn" onclick="startTopic('addition')"><span class="icon">➕</span> חיבור</button>
+      <button class="sidebar-btn" onclick="startTopic('subtraction')"><span class="icon">➖</span> חיסור</button>
+      <button class="sidebar-btn" onclick="startTopic('multiplication')"><span class="icon">✖️</span> כפל</button>
+      <button class="sidebar-btn" onclick="startTopic('division')"><span class="icon">➗</span> חילוק</button>
+      <button class="sidebar-btn" onclick="startTopic('long-division')"><span class="icon">📏</span> חילוק ארוך</button>
+      <button class="sidebar-btn" onclick="startTopic('fractions')"><span class="icon">½</span> שברים</button>
+      <button class="sidebar-btn" onclick="startTopic('frac-simplify')"><span class="icon">🔢</span> צמצום שברים</button>
+      <button class="sidebar-btn" onclick="startTopic('decimals')"><span class="icon">📍</span> עשרוניים</button>
+      <button class="sidebar-btn" onclick="startTopic('mixed')"><span class="icon">🎲</span> מעורב</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">רמה</div>
+      <button class="sidebar-btn" onclick="setGrade(2)"><span class="icon">⭐</span> כיתה ב׳</button>
+      <button class="sidebar-btn" onclick="setGrade(3)"><span class="icon">⭐⭐</span> כיתה ג׳</button>
+      <button class="sidebar-btn" onclick="setGrade(4)"><span class="icon">⭐⭐⭐</span> כיתה ד׳</button>
+      <button class="sidebar-btn" onclick="setGrade(5)"><span class="icon">🌟</span> כיתה ה׳</button>
+      <button class="sidebar-btn" onclick="setGrade(6)"><span class="icon">🌟🌟</span> כיתה ו׳</button>
+    </div>
+  </nav>
+
+  <main class="content" id="content">
+    <!-- Welcome screen rendered by JS -->
+  </main>
+</div>
+
+<!-- Results Modal -->
+<div class="modal-overlay" id="results-modal">
+  <div class="modal">
+    <h2>🎉 סיימת את הסט!</h2>
+    <div class="score-big" id="modal-score">0/0</div>
+    <div class="score-detail" id="modal-detail"></div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="closeModal();generateExercises()">סט חדש</button>
+      <button class="btn btn-outline" onclick="closeModal()">חזור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let currentTopic = 'mixed';
+let currentGrade = 3;
+let exercises = [];
+let answered = {}; // index -> {correct, userAnswer, marked}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while(b) { [a,b]=[b,a%b]; } return a; }
+function lcm(a, b) { return (a * b) / gcd(a, b); }
+function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function simplify(n, d) { const g = gcd(Math.abs(n), Math.abs(d)); return [n/g, d/g]; }
+
+function fmtFraction(n, d) {
+  if (d === 1) return String(n);
+  return `<span class="fraction"><span class="num">${n}</span><span class="den">${d}</span></span>`;
+}
+
+function parseFractionInput(val) {
+  val = val.trim().replace(/\s/g,'');
+  if (/^-?\d+\/\d+$/.test(val)) {
+    const [n,d] = val.split('/').map(Number);
+    return {n, d, valid: d !== 0};
+  }
+  if (/^-?\d+$/.test(val)) return {n: parseInt(val), d: 1, valid: true};
+  if (/^-?\d+[.,]\d+$/.test(val)) {
+    const f = parseFloat(val.replace(',','.'));
+    const str = val.replace(',','.');
+    const dec = str.split('.')[1]?.length || 0;
+    const denom = Math.pow(10, dec);
+    return {n: Math.round(f * denom), d: denom, valid: true};
+  }
+  return {valid: false};
+}
+
+function fractionsEqual(n1, d1, n2, d2) {
+  // cross multiply
+  return n1 * d2 === n2 * d1;
+}
+
+// ============================================================
+// EXERCISE GENERATORS
+// ============================================================
+const generators = {
+
+  addition: (grade) => {
+    if (grade <= 2) {
+      const a = rnd(1,20), b = rnd(1,20);
+      return { q: `${a} + ${b} = ?`, ans: a+b, type:'int' };
+    } else if (grade <= 3) {
+      const a = rnd(10,99), b = rnd(10,99);
+      return { q: `${a} + ${b} = ?`, ans: a+b, type:'int' };
+    } else if (grade <= 4) {
+      const a = rnd(100,999), b = rnd(100,999);
+      return { q: `${a} + ${b} = ?`, ans: a+b, type:'int' };
+    } else {
+      const a = rnd(1000,9999), b = rnd(1000,9999);
+      return { q: `${a} + ${b} = ?`, ans: a+b, type:'int' };
+    }
+  },
+
+  subtraction: (grade) => {
+    if (grade <= 2) {
+      const b = rnd(1,20), a = rnd(b,30);
+      return { q: `${a} - ${b} = ?`, ans: a-b, type:'int' };
+    } else if (grade <= 3) {
+      const b = rnd(10,99), a = rnd(b,199);
+      return { q: `${a} - ${b} = ?`, ans: a-b, type:'int' };
+    } else {
+      const b = rnd(100,999), a = rnd(b,1999);
+      return { q: `${a} - ${b} = ?`, ans: a-b, type:'int' };
+    }
+  },
+
+  multiplication: (grade) => {
+    if (grade <= 3) {
+      const a = rnd(1,10), b = rnd(1,10);
+      return { q: `${a} × ${b} = ?`, ans: a*b, type:'int' };
+    } else if (grade <= 4) {
+      const a = rnd(2,12), b = rnd(10,99);
+      return { q: `${a} × ${b} = ?`, ans: a*b, type:'int' };
+    } else {
+      const a = rnd(10,99), b = rnd(10,99);
+      return { q: `${a} × ${b} = ?`, ans: a*b, type:'int' };
+    }
+  },
+
+  division: (grade) => {
+    if (grade <= 3) {
+      const b = rnd(1,10), ans = rnd(1,10);
+      return { q: `${b*ans} ÷ ${b} = ?`, ans, type:'int' };
+    } else if (grade <= 4) {
+      const b = rnd(2,12), ans = rnd(2,20);
+      return { q: `${b*ans} ÷ ${b} = ?`, ans, type:'int' };
+    } else {
+      const b = rnd(2,12), ans = rnd(10,50);
+      return { q: `${b*ans} ÷ ${b} = ?`, ans, type:'int' };
+    }
+  },
+
+  'long-division': (grade) => {
+    let divisor, quotient, remainder;
+    if (grade <= 3) {
+      divisor = rnd(2, 9);
+      quotient = rnd(10, 99);
+      remainder = 0;
+    } else if (grade <= 4) {
+      divisor = rnd(2, 9);
+      quotient = rnd(10, 99);
+      remainder = rnd(0, divisor-1);
+    } else {
+      divisor = rnd(2, 12);
+      quotient = rnd(10, 99);
+      remainder = rnd(0, divisor-1);
+    }
+    const dividend = divisor * quotient + remainder;
+    const qStr = remainder > 0 ? `${quotient} שארית ${remainder}` : `${quotient}`;
+    return {
+      q: `${dividend} ÷ ${divisor} = ? (חילוק ארוך)`,
+      ans: qStr,
+      type: 'long-div',
+      extra: { dividend, divisor, quotient, remainder }
+    };
+  },
+
+  fractions: (grade) => {
+    const ops = grade <= 3 ? ['add','sub'] : grade <= 4 ? ['add','sub','mul'] : ['add','sub','mul','div'];
+    const op = ops[rnd(0, ops.length-1)];
+    let d1 = rnd(2, grade <= 3 ? 6 : 10);
+    let n1 = rnd(1, d1-1);
+    let d2 = grade <= 3 ? d1 : rnd(2, 8);
+    let n2 = rnd(1, d2-1);
+
+    let qHtml, ansN, ansD;
+    if (op === 'add') {
+      const l = lcm(d1, d2);
+      ansN = n1*(l/d1) + n2*(l/d2);
+      ansD = l;
+      qHtml = `${fmtFraction(n1,d1)} + ${fmtFraction(n2,d2)} = ?`;
+    } else if (op === 'sub') {
+      // ensure positive
+      const l = lcm(d1, d2);
+      let r1 = n1*(l/d1), r2 = n2*(l/d2);
+      if (r1 < r2) { [n1,d1,n2,d2]=[n2,d2,n1,d1]; [r1,r2]=[r2,r1]; }
+      ansN = r1 - r2; ansD = l;
+      qHtml = `${fmtFraction(n1,d1)} - ${fmtFraction(n2,d2)} = ?`;
+    } else if (op === 'mul') {
+      ansN = n1*n2; ansD = d1*d2;
+      qHtml = `${fmtFraction(n1,d1)} × ${fmtFraction(n2,d2)} = ?`;
+    } else {
+      ansN = n1*d2; ansD = d1*n2;
+      qHtml = `${fmtFraction(n1,d1)} ÷ ${fmtFraction(n2,d2)} = ?`;
+    }
+    const [sn, sd] = simplify(ansN, ansD);
+    return { q: qHtml, ans: `${sn}/${sd}`, ansN: sn, ansD: sd, type:'fraction', html:true };
+  },
+
+  'frac-simplify': (grade) => {
+    const d = rnd(2, grade <= 4 ? 6 : 12);
+    const k = rnd(2, grade <= 4 ? 4 : 8);
+    const n = rnd(1, d-1);
+    const [sn, sd] = simplify(n*k, d*k);
+    return { q: `${fmtFraction(n*k, d*k)} — צמצם`, ans: `${sn}/${sd}`, ansN: sn, ansD: sd, type:'fraction', html:true };
+  },
+
+  decimals: (grade) => {
+    const types = ['add','sub','mul','small-mul'];
+    const t = types[rnd(0, types.length-1)];
+
+    if (t === 'small-mul') {
+      // e.g. 0.001 × 100
+      const bases = [0.001, 0.01, 0.1, 0.001, 0.01];
+      const mults = [10, 100, 1000, 45, 7, 25, 50, 200, 500];
+      const base = bases[rnd(0,bases.length-1)];
+      const mult = mults[rnd(0,mults.length-1)];
+      const ans = parseFloat((base * mult).toPrecision(10));
+      return { q: `${base} × ${mult} = ?`, ans: String(ans), type:'decimal' };
+    } else if (t === 'add') {
+      const dec = rnd(1,2);
+      const factor = Math.pow(10, dec);
+      const a = rnd(1, 99) / factor;
+      const b = rnd(1, 99) / factor;
+      const ans = parseFloat((a+b).toFixed(dec+1));
+      return { q: `${a.toFixed(dec)} + ${b.toFixed(dec)} = ?`, ans: String(ans), type:'decimal' };
+    } else if (t === 'sub') {
+      const dec = rnd(1,2);
+      const factor = Math.pow(10, dec);
+      const b = rnd(1, 50) / factor;
+      const a = rnd(50, 99) / factor;
+      const ans = parseFloat((a-b).toFixed(dec+1));
+      return { q: `${a.toFixed(dec)} - ${b.toFixed(dec)} = ?`, ans: String(ans), type:'decimal' };
+    } else {
+      const a = rnd(1,9), dec = rnd(1,2);
+      const factor = Math.pow(10, dec);
+      const b = rnd(1, 99) / factor;
+      const ans = parseFloat((a*b).toPrecision(10));
+      return { q: `${a} × ${b.toFixed(dec)} = ?`, ans: String(ans), type:'decimal' };
+    }
+  },
+
+  mixed: (grade) => {
+    const pool = grade <= 2
+      ? ['addition','subtraction','multiplication']
+      : grade <= 3
+      ? ['addition','subtraction','multiplication','division']
+      : grade <= 4
+      ? ['addition','subtraction','multiplication','division','long-division','fractions']
+      : ['multiplication','division','long-division','fractions','frac-simplify','decimals'];
+    const t = pool[rnd(0, pool.length-1)];
+    return generators[t](grade);
+  }
+};
+
+// ============================================================
+// GENERATE EXERCISES
+// ============================================================
+function generateExercises(count) {
+  count = count || (currentGrade <= 3 ? 20 : 30);
+  exercises = [];
+  answered = {};
+  for (let i = 0; i < count; i++) {
+    exercises.push(generators[currentTopic](currentGrade));
+  }
+  renderExercises();
+  showSection('exercises');
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderExercises() {
+  const total = exercises.length;
+  const done = Object.keys(answered).length;
+  const correct = Object.values(answered).filter(a => a.correct).length;
+  const wrong = Object.values(answered).filter(a => !a.correct).length;
+
+  const topicNames = {
+    'addition':'חיבור','subtraction':'חיסור','multiplication':'כפל','division':'חילוק',
+    'long-division':'חילוק ארוך','fractions':'שברים','frac-simplify':'צמצום שברים',
+    'decimals':'עשרוניים','mixed':'מעורב'
+  };
+
+  let html = `
+    <div class="exercise-header">
+      <div class="exercise-title">📝 ${topicNames[currentTopic]} — כיתה ${gradeHeb(currentGrade)}</div>
+      <div class="exercise-controls">
+        <button class="btn btn-success" onclick="checkAll()">✅ בדוק הכל</button>
+        <button class="btn btn-primary" onclick="generateExercises()">🔄 סט חדש</button>
+        <button class="btn btn-warning" onclick="showResults()">📊 תוצאות</button>
+      </div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-chip">סה"כ: <b>${total}</b></div>
+      <div class="stat-chip">ענית: <b>${done}</b></div>
+      <div class="stat-chip correct">נכון: <b>${correct}</b></div>
+      <div class="stat-chip wrong">שגוי: <b>${wrong}</b></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" style="width:${total>0?done/total*100:0}%"></div>
+    </div>
+    <div class="exercise-grid">
+  `;
+
+  exercises.forEach((ex, i) => {
+    const ans = answered[i];
+    let cardClass = 'exercise-card';
+    if (ans) cardClass += ans.correct ? ' answered-correct' : ' answered-wrong';
+    if (ans && ans.marked) cardClass += ' marked';
+
+    let resultHtml = '';
+    let inputClass = '';
+    if (ans) {
+      resultHtml = ans.correct
+        ? `<div class="result-icon">✅</div>`
+        : `<div><div class="result-icon">❌</div><div class="correct-answer">תשובה נכונה: ${ex.ans}</div></div>`;
+      inputClass = ans.correct ? 'correct' : 'wrong';
+    }
+
+    const qDisplay = ex.html ? ex.q : ex.q;
+    const inputVal = ans ? (ans.userAnswer || '') : '';
+    const inputDisabled = ans ? 'disabled' : '';
+    const inputHint = ex.type === 'fraction' ? '<div class="input-hint">הכנס כ: מונה/מכנה (למשל 3/4)</div>' : '';
+    const inputHint2 = ex.type === 'long-div' ? '<div class="input-hint">לדוגמא: 12 שארית 3 או 12</div>' : '';
+
+    const markActive = ans && ans.marked ? 'active' : '';
+
+    html += `
+      <div class="${cardClass}" id="card-${i}">
+        <span class="exercise-num">#${i+1}</span>
+        <button class="mark-done-btn ${markActive}" onclick="toggleMark(${i})" title="סמן כנעשה">⭐</button>
+        <div class="exercise-q">${qDisplay}</div>
+        <div class="answer-row">
+          <input type="text" class="answer-input ${inputClass}" id="input-${i}" value="${inputVal}" placeholder="תשובה..." ${inputDisabled} onkeydown="if(event.key==='Enter') checkOne(${i})">
+          ${!ans ? `<button class="check-btn" onclick="checkOne(${i})">בדוק</button>` : ''}
+          ${resultHtml}
+        </div>
+        ${inputHint}${inputHint2}
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+function gradeHeb(g) {
+  return ['','א׳','ב׳','ג׳','ד׳','ה׳','ו׳'][g] || g;
+}
+
+// ============================================================
+// CHECK ANSWERS
+// ============================================================
+function checkOne(i) {
+  const ex = exercises[i];
+  const input = document.getElementById(`input-${i}`);
+  const val = input ? input.value.trim() : '';
+  if (!val) return;
+
+  let correct = false;
+
+  if (ex.type === 'int') {
+    correct = parseInt(val) === ex.ans;
+  } else if (ex.type === 'fraction') {
+    const parsed = parseFractionInput(val);
+    if (parsed.valid) {
+      correct = fractionsEqual(parsed.n, parsed.d, ex.ansN, ex.ansD);
+    }
+  } else if (ex.type === 'decimal') {
+    const userNum = parseFloat(val.replace(',','.'));
+    const ansNum = parseFloat(ex.ans);
+    correct = Math.abs(userNum - ansNum) < 1e-9;
+  } else if (ex.type === 'long-div') {
+    // flexible: accept "12 שארית 3" or "12r3" or "12" if no remainder
+    const ex2 = ex.extra;
+    const v = val.replace(/\s+/g,' ').trim().toLowerCase();
+    if (ex2.remainder === 0) {
+      correct = parseInt(val) === ex2.quotient;
+    } else {
+      const patterns = [
+        new RegExp(`^${ex2.quotient}\\s*שארית\\s*${ex2.remainder}$`),
+        new RegExp(`^${ex2.quotient}\\s*r\\s*${ex2.remainder}$`),
+        new RegExp(`^${ex2.quotient}\\s*,\\s*${ex2.remainder}$`),
+      ];
+      correct = patterns.some(p => p.test(v));
+    }
+  }
+
+  answered[i] = { correct, userAnswer: val, marked: answered[i]?.marked || false };
+  renderExercises();
+
+  // Scroll back to card
+  setTimeout(() => {
+    const el = document.getElementById(`card-${i}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+}
+
+function checkAll() {
+  exercises.forEach((ex, i) => {
+    if (!answered[i]) {
+      const input = document.getElementById(`input-${i}`);
+      if (input && input.value.trim()) checkOne(i);
+    }
+  });
+  renderExercises();
+}
+
+function toggleMark(i) {
+  if (!answered[i]) answered[i] = { correct: false, userAnswer: '', marked: false };
+  answered[i].marked = !answered[i].marked;
+  const btn = document.querySelector(`#card-${i} .mark-done-btn`);
+  if (btn) btn.classList.toggle('active', answered[i].marked);
+}
+
+// ============================================================
+// RESULTS
+// ============================================================
+function showResults() {
+  const total = exercises.length;
+  const answered_arr = Object.values(answered);
+  const correct = answered_arr.filter(a => a.correct).length;
+  const wrong = answered_arr.filter(a => !a.correct).length;
+  const unanswered = total - answered_arr.length;
+
+  document.getElementById('modal-score').textContent = `${correct}/${total}`;
+  const pct = total > 0 ? Math.round(correct/total*100) : 0;
+  let emoji = pct >= 90 ? '🏆 מצוין!' : pct >= 70 ? '👍 כל הכבוד!' : pct >= 50 ? '📚 טוב, המשך!' : '💪 תנסה שוב!';
+  document.getElementById('modal-detail').innerHTML =
+    `<b>${pct}%</b> — ${emoji}<br>נכון: ${correct} · שגוי: ${wrong} · לא ענית: ${unanswered}`;
+  document.getElementById('results-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('results-modal').classList.remove('open');
+}
+
+// ============================================================
+// MULTIPLICATION TABLE
+// ============================================================
+function renderMultTable() {
+  const max = currentGrade <= 2 ? 5 : currentGrade <= 3 ? 10 : 12;
+  let html = `
+    <div class="exercise-header">
+      <div class="exercise-title">✖️ לוח הכפל (עד ${max}×${max})</div>
+      <div class="exercise-controls">
+        <button class="btn btn-primary" onclick="startTopic('multiplication')">🎯 תרגל!</button>
+      </div>
+    </div>
+    <div class="mult-table">
+      <table>
+        <tr><th>×</th>`;
+  for (let i=1;i<=max;i++) html += `<th>${i}</th>`;
+  html += '</tr>';
+  for (let i=1;i<=max;i++) {
+    html += `<tr><td class="header-col">${i}</td>`;
+    for (let j=1;j<=max;j++) {
+      html += `<td onclick="highlightCell(this,${i},${j})" id="mc-${i}-${j}">${i*j}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += `</table></div>
+    <div class="mult-table-legend">לחץ על תא להדגשה. שנה רמה בתפריט לשינוי הגודל.</div>
+  `;
+  document.getElementById('content').innerHTML = html;
+}
+
+function highlightCell(el, r, c) {
+  document.querySelectorAll('.mult-table td.highlight').forEach(td => td.classList.remove('highlight'));
+  for (let j=1;j<=12;j++) { const t=document.getElementById(`mc-${r}-${j}`); if(t) t.classList.add('highlight'); }
+  for (let i=1;i<=12;i++) { const t=document.getElementById(`mc-${i}-${c}`); if(t) t.classList.add('highlight'); }
+  el.style.background = '#ffd600';
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showSection(sec) {
+  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+  if (sec === 'welcome') renderWelcome();
+  else if (sec === 'mult-table') { renderMultTable(); highlightSidebarBtn('mult-table'); }
+  else if (sec === 'exercises') { renderExercises(); highlightSidebarBtn('exercises'); }
+}
+
+function highlightSidebarBtn(name) {
+  document.querySelectorAll('.sidebar-btn').forEach(b => {
+    if (b.textContent.includes(name === 'mult-table' ? 'לוח הכפל' : name === 'exercises' ? 'תרגילים' : '')) b.classList.add('active');
+  });
+}
+
+function startTopic(topic) {
+  currentTopic = topic;
+  generateExercises();
+}
+
+function setGrade(g) {
+  currentGrade = g;
+  renderWelcome();
+}
+
+function renderWelcome() {
+  const topicsData = [
+    { key:'addition', icon:'➕', name:'חיבור', desc:'חיבור מספרים' },
+    { key:'subtraction', icon:'➖', name:'חיסור', desc:'חיסור מספרים' },
+    { key:'multiplication', icon:'✖️', name:'כפל', desc:'לוח הכפל ועוד' },
+    { key:'division', icon:'➗', name:'חילוק', desc:'חילוק מספרים' },
+    { key:'long-division', icon:'📏', name:'חילוק ארוך', desc:'עם שאריות' },
+    { key:'fractions', icon:'½', name:'שברים', desc:'חיבור / חיסור / כפל / חילוק' },
+    { key:'frac-simplify', icon:'🔢', name:'צמצום שברים', desc:'מציאת הצורה הפשוטה' },
+    { key:'decimals', icon:'📍', name:'עשרוניים', desc:'0.001×100 ועוד' },
+    { key:'mixed', icon:'🎲', name:'מעורב', desc:'הכל ביחד!' },
+  ];
+
+  let html = `
+    <div class="welcome">
+      <h2>ברוכים הבאים! 🎓</h2>
+      <p>בחר נושא ורמה כדי להתחיל לתרגל</p>
+      <div class="grade-bar" style="justify-content:center;margin-bottom:28px;">
+        ${[2,3,4,5,6].map(g=>`<button class="grade-btn ${g===currentGrade?'active':''}" onclick="setGrade(${g})">כיתה ${gradeHeb(g)}</button>`).join('')}
+      </div>
+      <div class="topic-cards">
+  `;
+  topicsData.forEach(t => {
+    html += `
+      <div class="topic-card" onclick="startTopic('${t.key}')">
+        <div class="topic-icon">${t.icon}</div>
+        <div class="topic-name">${t.name}</div>
+        <div class="topic-desc">${t.desc}</div>
+      </div>
+    `;
+  });
+  html += '</div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderWelcome();
+</script>
+</body>
+</html>
